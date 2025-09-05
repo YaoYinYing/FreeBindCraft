@@ -55,7 +55,7 @@ You can also run BindCraft entirely inside a Docker container without a local in
 
 Activate the Conda environment:
 ```bash
-conda activate BindCraft
+conda activate FreeBindCraft
 ```
 
 Change to your BindCraft installation directory:

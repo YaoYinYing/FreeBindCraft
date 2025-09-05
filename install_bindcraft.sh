@@ -55,16 +55,23 @@ install_dir=$(pwd)
 CONDA_BASE=$(conda info --base 2>/dev/null) || { echo -e "Error: conda is not installed or cannot be initialised."; exit 1; }
 echo -e "Conda is installed at: $CONDA_BASE"
 
-### BindCraft install begin, create base environment
-echo -e "Installing BindCraft environment\n"
-$pkg_manager create --name BindCraft python=3.10 -y || { echo -e "Error: Failed to create BindCraft conda environment"; exit 1; }
-conda env list | grep -w 'BindCraft' >/dev/null 2>&1 || { echo -e "Error: Conda environment 'BindCraft' does not exist after creation."; exit 1; }
+# check if FBC env installed
+FBC_ENV_PATH=$(conda env list | grep FreeBindCraft | awk '{print $2}')
+if [[ -z "${FBC_ENV_PATH}" ]];then
+    ### BindCraft install begin, create base environment
+    echo -e "Installing FreeBindCraft environment\n"
+    $pkg_manager create --name FreeBindCraft python=3.10 -y || { echo -e "Error: Failed to create FreeBindCraft conda environment"; exit 1; }
+    conda env list | grep -w 'FreeBindCraft' >/dev/null 2>&1 || { echo -e "Error: Conda environment 'FreeBindCraft' does not exist after creation."; exit 1; }
+else
+    echo -e "BindCraft environment existed at ${FBC_ENV_PATH}"
+fi
 
-# Load newly created BindCraft environment
-echo -e "Loading BindCraft environment\n"
-source ${CONDA_BASE}/bin/activate ${CONDA_BASE}/envs/BindCraft || { echo -e "Error: Failed to activate the BindCraft environment."; exit 1; }
-[ "$CONDA_DEFAULT_ENV" = "BindCraft" ] || { echo -e "Error: The BindCraft environment is not active."; exit 1; }
-echo -e "BindCraft environment activated at ${CONDA_BASE}/envs/BindCraft"
+# Load newly created FreeBindCraft environment
+echo -e "Loading FreeBindCraft environment\n"
+FBC_ENV_PATH=$(conda env list | grep FreeBindCraft | awk '{print $2}')
+source ${CONDA_BASE}/bin/activate ${FBC_ENV_PATH} || { echo -e "Error: Failed to activate the BindCraft environment."; exit 1; }
+[ "$CONDA_DEFAULT_ENV" = "FreeBindCraft" ] || { echo -e "Error: The FreeBindCraft environment is not active."; exit 1; }
+echo -e "BindCraft environment activated at ${FBC_ENV_PATH}"
 
 # install required conda packages
 echo -e "Installing conda requirements\n"
@@ -113,8 +120,10 @@ fi
 missing_packages=()
 
 # Check each package
+echo -e "Check each package\n"
+ALL_CONDA_INSTALLED=$(conda list | awk '{print $1}')
 for pkg in "${required_packages[@]}"; do
-    conda list "$pkg" | grep -w "$pkg" >/dev/null 2>&1 || missing_packages+=("$pkg")
+     echo $ALL_CONDA_INSTALLED |grep -w "$pkg" >/dev/null 2>&1 && echo " - [x] $pkg " || { missing_packages+=("$pkg") && echo " - [ ] $pkg"; }
 done
 
 # If any packages are missing, output error and exit
@@ -127,9 +136,14 @@ if [ ${#missing_packages[@]} -ne 0 ]; then
 fi
 
 # install ColabDesign
-echo -e "Installing ColabDesign\n"
-pip3 install git+https://github.com/sokrypton/ColabDesign.git --no-deps || { echo -e "Error: Failed to install ColabDesign"; exit 1; }
-python -c "import colabdesign" >/dev/null 2>&1 || { echo -e "Error: colabdesign module not found after installation"; exit 1; }
+MISSING_COLABDESIGN=$(python -c "import colabdesign")
+if [[ ! -z "$MISSING_COLABDESIGN" ]];then
+    echo -e "Installing ColabDesign\n"
+    pip3 install git+https://github.com/sokrypton/ColabDesign.git --no-deps || { echo -e "Error: Failed to install ColabDesign"; exit 1; }
+    python -c "import colabdesign" >/dev/null 2>&1 || { echo -e "Error: colabdesign module not found after installation"; exit 1; }
+else
+    echo -e "Installing ColabDesign - Skipped\n"
+fi
 
 # install FreeSASA Python module
 echo -e "Installing FreeSASA Python module\n"
@@ -143,7 +157,7 @@ params_file="${params_dir}/alphafold_params_2022-12-06.tar"
 
 # download AF2 weights
 mkdir -p "${params_dir}" || { echo -e "Error: Failed to create weights directory"; exit 1; }
-wget -O "${params_file}" "https://storage.googleapis.com/alphafold/alphafold_params_2022-12-06.tar" || { echo -e "Error: Failed to download AlphaFold2 weights"; exit 1; }
+aria2c -x 16 -o "${params_file}" "https://storage.googleapis.com/alphafold/alphafold_params_2022-12-06.tar" || { echo -e "Error: Failed to download AlphaFold2 weights"; exit 1; }
 [ -s "${params_file}" ] || { echo -e "Error: Could not locate downloaded AlphaFold2 weights"; exit 1; }
 
 # extract AF2 weights
@@ -173,7 +187,7 @@ fi
 
 # finish
 conda deactivate
-echo -e "BindCraft environment set up\n"
+echo -e "FreeBindCraft environment set up\n"
 
 ############################################################################################################
 ############################################################################################################
@@ -184,7 +198,7 @@ echo -e "$pkg_manager cleaned up\n"
 
 ################## finish script
 t=$SECONDS 
-echo -e "Successfully finished BindCraft installation!\n"
-echo -e "Activate environment using command: \"$pkg_manager activate BindCraft\""
+echo -e "Successfully finished FreeBindCraft installation!\n"
+echo -e "Activate environment using command: \"$pkg_manager activate FreeBindCraft\""
 echo -e "\n"
 echo -e "Installation took $(($t / 3600)) hours, $((($t / 60) % 60)) minutes and $(($t % 60)) seconds."
