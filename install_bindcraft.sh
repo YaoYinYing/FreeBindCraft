@@ -157,7 +157,7 @@ params_file="${params_dir}/alphafold_params_2022-12-06.tar"
 
 # download AF2 weights
 mkdir -p "${params_dir}" || { echo -e "Error: Failed to create weights directory"; exit 1; }
-aria2c -x 16 -o "${params_file}" "https://storage.googleapis.com/alphafold/alphafold_params_2022-12-06.tar" || { echo -e "Error: Failed to download AlphaFold2 weights"; exit 1; }
+wget -O "${params_file}" "https://storage.googleapis.com/alphafold/alphafold_params_2022-12-06.tar" || { echo -e "Error: Failed to download AlphaFold2 weights"; exit 1; }
 [ -s "${params_file}" ] || { echo -e "Error: Could not locate downloaded AlphaFold2 weights"; exit 1; }
 
 # extract AF2 weights
